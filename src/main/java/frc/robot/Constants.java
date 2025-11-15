@@ -36,6 +36,12 @@ public final class Constants {
     public static final int kBackLeftMotorID = 12;
     public static final int kBackRightMotorID = 13;
 
+    public static final double kSlewRateLimitForMotors = 1.0;
+
+    public static final double kP = 3;
+    public static final double kI = 0;
+    public static final double kD = 0;
+
     public static final int kFrontLeftMotorA = 0;
     public static final int kFrontLeftMotorB = 1;
     public static final int kFrontRightMotorA = 2;
@@ -46,17 +52,17 @@ public final class Constants {
     public static final int kBackRightMotorB = 7;
 
     public static final boolean kFrontLeftInverted = false;
-    public static final boolean kFrontRightInverted = false;
-    public static final boolean kBackLeftInverted = true;
+    public static final boolean kFrontRightInverted = true;
+    public static final boolean kBackLeftInverted = false;
     public static final boolean kBackRightInverted = true;
     
     public static final double kDistancePerPulse = 7.0/20.0; //or 20.0/7.0 we dont know  
 
-    public static final Distance kTrackwidth = Distance.ofBaseUnits(65.5, Centimeters);
-    public static final Distance kWheelBase = Distance.ofBaseUnits(52.5, Centimeters);
+    public static final Distance kTrackwidth = Distance.ofRelativeUnits(65.5, Centimeters);
+    public static final Distance kWheelBase = Distance.ofRelativeUnits(52.5, Centimeters);
 
-    public static final Distance kWheelDiameter = Distance.ofBaseUnits(10, Inches);
-    public static final AngularVelocity kMotorMaxAngularVelocity = AngularVelocity.ofBaseUnits(5310.0 / 60.0, RotationsPerSecond);
+    public static final Distance kWheelDiameter = Distance.ofRelativeUnits(10, Inches);
+    public static final AngularVelocity kMotorMaxAngularVelocity = AngularVelocity.ofRelativeUnits(5310.0 / 60.0, RotationsPerSecond);
     public static final double kMotorGearboxRatio = 1.0/9.0;
 
     public static final AngularVelocity kWheelMaxAngularVelocity = kMotorMaxAngularVelocity.times(kMotorGearboxRatio);
@@ -68,7 +74,11 @@ public final class Constants {
       kWheelMaxAngularVelocity.in(RotationsPerSecond) * kWheelCircumference.in(Meter), MetersPerSecond); //change later
 
     public static final Distance kTrackWidthCircumference = kTrackwidth.times(Math.PI);
-    public static final AngularVelocity kMaxRobotTurnSpeed = AngularVelocity.ofBaseUnits(
+    public static final AngularVelocity kMaxRobotTurnSpeed = AngularVelocity.ofRelativeUnits(
       kTrackWidthCircumference.in(Meter) / kMaxWheelSpeed.in(MetersPerSecond), RotationsPerSecond);
+  }
+  public static class PneumaticConstants{
+    public static final int kCannonCount = 6;
+    public static final double kFiringTime = 0.2; //As seconds
   }
 }

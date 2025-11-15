@@ -9,8 +9,10 @@ import frc.robot.commands.Autos;
 import frc.robot.commands.ExampleCommand;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.ExampleSubsystem;
+import frc.robot.subsystems.Pneumatics;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -28,6 +30,7 @@ public class RobotContainer {
   // The robot's subsystems and commands are defined here...
   private final ExampleSubsystem m_exampleSubsystem = new ExampleSubsystem();
   private final Drivetrain m_drivetrain = new Drivetrain();
+  private final Pneumatics m_pneumatics = new Pneumatics();
 
   // Replace with CommandPS4Controller or CommandJoystick if needed
   private final XboxController m_driverController = new XboxController(OperatorConstants.kDriverControllerPort);
@@ -64,14 +67,8 @@ public class RobotContainer {
    * joysticks}.
    */
   private void configureBindings() {
-    // Schedule `ExampleCommand` when `exampleCondition` changes to `true`
-    new Trigger(m_exampleSubsystem::exampleCondition)
-        .onTrue(new ExampleCommand(m_exampleSubsystem));
-
-    // Schedule `exampleMethodCommand` when the Xbox controller's B button is
-    // pressed,
-    // cancelling on release.
-    new Trigger(()->m_driverController.getAButton()).whileTrue(m_exampleSubsystem.exampleMethodCommand());
+    new Trigger(()->m_driverController.getAButton()).onTrue(new InstantCommand(m_pneumatics::fireCannon, m_pneumatics));
+    new Trigger(()->m_driverController.getYButton()).onTrue(new InstantCommand(m_drivetrain::resetGyro, m_drivetrain));
   }
 
   /**
