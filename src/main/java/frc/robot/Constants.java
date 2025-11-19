@@ -10,10 +10,16 @@ import static edu.wpi.first.units.Units.Meter;
 import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
+import static edu.wpi.first.units.Units.Volts;
 
+import edu.wpi.first.units.VoltageUnit;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.LinearVelocity;
+import edu.wpi.first.units.measure.MutVelocity;
+import edu.wpi.first.units.measure.Time;
+import edu.wpi.first.units.measure.Velocity;
+import edu.wpi.first.units.measure.Voltage;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
@@ -38,9 +44,19 @@ public final class Constants {
 
     public static final double kSlewRateLimitForMotors = 1.0;
 
-    public static final double kP = 3;
+    public static final double kP = 0.01;
     public static final double kI = 0;
     public static final double kD = 0;
+
+    public static final double kS = 0;
+    public static final double kV = 0;
+    public static final double kA = 0;
+
+    public static final Velocity<VoltageUnit> kSysIdRampRate = null;
+    public static final Voltage kStepVoltage = null;
+    public static final Time kTimeout = null;
+
+    
 
     public static final int kFrontLeftMotorA = 0;
     public static final int kFrontLeftMotorB = 1;

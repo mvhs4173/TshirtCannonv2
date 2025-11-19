@@ -5,9 +5,11 @@
 package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.Meter;
+import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
+import static edu.wpi.first.units.Units.Volts;
 
 import com.ctre.phoenix.motorcontrol.can.TalonSRXConfiguration;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
@@ -15,15 +17,27 @@ import com.studica.frc.AHRS;
 import com.studica.frc.AHRS.NavXComType;
 
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.MecanumDriveKinematics;
+import edu.wpi.first.units.measure.MutDistance;
+import edu.wpi.first.units.measure.MutLinearVelocity;
+import edu.wpi.first.units.measure.MutVoltage;
+import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.math.kinematics.MecanumDriveWheelSpeeds;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Mechanism;
 import frc.robot.Constants.DrivetrainConstants;
 import frc.robot.Constants.OperatorConstants;
 
@@ -36,9 +50,53 @@ public class Drivetrain extends SubsystemBase {
   private SlewRateLimiter m_frontLeftLimiter, m_frontRightLimiter, m_backLeftLimiter, m_backRightLimiter;
   private PIDController m_frontLeftPidController, m_frontRightPidController, m_backLeftPidController,
       m_backRightPidController;
+  private SimpleMotorFeedforward m_frontLeftFeedforward, m_frontRightFeedforward, m_backLeftFeedforward,
+      m_backRightFeedforward;
+  private Config m_sysIdConfig;
+  private Mechanism m_sysIdMechanism;
+  private SysIdRoutine m_sysIdRoutine;
+  private final MutVoltage m_appliedVoltage = Volts.mutable(0);
+  private final MutDistance m_distance = Meters.mutable(0);
+  private final MutLinearVelocity m_velocity = MetersPerSecond.mutable(0);
 
   /** Creates a new Drivetrain. */
   public Drivetrain() {
+    m_sysIdConfig = new Config(DrivetrainConstants.kSysIdRampRate, DrivetrainConstants.kStepVoltage,
+        DrivetrainConstants.kTimeout);
+
+    m_sysIdMechanism = new Mechanism(this::applyVolts, log -> {
+      log.motor("drive-front-left")
+          .voltage(
+              m_appliedVoltage.mut_replace(
+                  m_frontLeftMotor.get() * RobotController.getBatteryVoltage(), Volts))
+          .linearPosition(m_distance.mut_replace(m_frontLeftEncoder.getDistance(), Meters))
+          .linearVelocity(
+              m_velocity.mut_replace(m_frontLeftEncoder.getRate(), MetersPerSecond));
+      log.motor("drive-front-right")
+          .voltage(
+              m_appliedVoltage.mut_replace(
+                  m_frontRightMotor.get() * RobotController.getBatteryVoltage(), Volts))
+          .linearPosition(m_distance.mut_replace(m_frontRightEncoder.getDistance(), Meters))
+          .linearVelocity(
+              m_velocity.mut_replace(m_frontRightEncoder.getRate(), MetersPerSecond));
+      log.motor("drive-back-left")
+          .voltage(
+              m_appliedVoltage.mut_replace(
+                  m_backLeftMotor.get() * RobotController.getBatteryVoltage(), Volts))
+          .linearPosition(m_distance.mut_replace(m_backLeftEncoder.getDistance(), Meters))
+          .linearVelocity(
+              m_velocity.mut_replace(m_backLeftEncoder.getRate(), MetersPerSecond));
+      log.motor("drive-back-right")
+          .voltage(
+              m_appliedVoltage.mut_replace(
+                  m_backRightMotor.get() * RobotController.getBatteryVoltage(), Volts))
+          .linearPosition(m_distance.mut_replace(m_backRightEncoder.getDistance(), Meters))
+          .linearVelocity(
+              m_velocity.mut_replace(m_backRightEncoder.getRate(), MetersPerSecond));
+    }, this, "sysIdRoutine");
+
+    m_sysIdRoutine = new SysIdRoutine(m_sysIdConfig, m_sysIdMechanism);
+
     m_frontLeftMotor = new WPI_TalonSRX(10);
     m_backLeftMotor = new WPI_TalonSRX(11);
     m_frontRightMotor = new WPI_TalonSRX(12);
@@ -65,6 +123,15 @@ public class Drivetrain extends SubsystemBase {
     m_backLeftPidController = new PIDController(DrivetrainConstants.kP, DrivetrainConstants.kI, DrivetrainConstants.kD);
     m_backRightPidController = new PIDController(DrivetrainConstants.kP, DrivetrainConstants.kI,
         DrivetrainConstants.kD);
+
+    m_frontLeftFeedforward = new SimpleMotorFeedforward(DrivetrainConstants.kS, DrivetrainConstants.kV,
+        DrivetrainConstants.kA);
+    m_frontRightFeedforward = new SimpleMotorFeedforward(DrivetrainConstants.kS, DrivetrainConstants.kV,
+        DrivetrainConstants.kA);
+    m_backLeftFeedforward = new SimpleMotorFeedforward(DrivetrainConstants.kS, DrivetrainConstants.kV,
+        DrivetrainConstants.kA);
+    m_backRightFeedforward = new SimpleMotorFeedforward(DrivetrainConstants.kS, DrivetrainConstants.kV,
+        DrivetrainConstants.kA);
 
     m_NavX = new AHRS(NavXComType.kMXP_SPI);
 
@@ -185,25 +252,99 @@ public class Drivetrain extends SubsystemBase {
 
   public void applyWheelSpeedsPID(MecanumDriveWheelSpeeds wheelSpeeds) {
 
-    double frontLeftIntendedSpeed = m_frontLeftLimiter.calculate(wheelSpeeds.frontLeftMetersPerSecond);
-    double frontRightIntendedSpeed = m_frontRightLimiter.calculate(wheelSpeeds.frontRightMetersPerSecond);
-    double backLeftIntendedSpeed = m_backLeftLimiter.calculate(wheelSpeeds.rearLeftMetersPerSecond);
-    double backRightIntendedSpeed = m_backRightLimiter.calculate(wheelSpeeds.rearRightMetersPerSecond);
-
     wheelSpeeds.desaturate(DrivetrainConstants.kMaxWheelSpeed);
+
+    double frontLeftIntendedVoltage = wheelSpeeds.frontLeftMetersPerSecond
+        / DrivetrainConstants.kMaxWheelSpeed.in(MetersPerSecond) * 12;
+    frontLeftIntendedVoltage += m_frontLeftLimiter.calculate(m_frontLeftEncoder.getRate());
+    double frontRightIntendedVoltage = wheelSpeeds.frontRightMetersPerSecond
+        / DrivetrainConstants.kMaxWheelSpeed.in(MetersPerSecond) * 12;
+    frontRightIntendedVoltage += m_frontRightLimiter.calculate(m_frontRightEncoder.getRate());
+    double backLeftIntendedVoltage = wheelSpeeds.rearLeftMetersPerSecond
+        / DrivetrainConstants.kMaxWheelSpeed.in(MetersPerSecond) * 12;
+    backLeftIntendedVoltage += m_backLeftLimiter.calculate(m_backLeftEncoder.getRate());
+    double backRightIntendedVoltage = wheelSpeeds.rearRightMetersPerSecond
+        / DrivetrainConstants.kMaxWheelSpeed.in(MetersPerSecond) * 12;
+    backRightIntendedVoltage += m_backRightLimiter.calculate(m_backRightEncoder.getRate());
+    
+    double[] voltages = desaturateVoltage(frontLeftIntendedVoltage, frontRightIntendedVoltage, backLeftIntendedVoltage, backRightIntendedVoltage);
+
+
     m_frontLeftMotor
-        .setVoltage(m_frontLeftPidController.calculate(frontLeftIntendedSpeed));
-    m_frontRightMotor.setVoltage(
-        m_frontRightPidController.calculate(frontRightIntendedSpeed));
+        .setVoltage(voltages[0]);
+    m_frontRightMotor
+        .setVoltage(voltages[1]);
     m_backLeftMotor
-        .setVoltage(m_backLeftPidController.calculate(backLeftIntendedSpeed));
+        .setVoltage(voltages[2]);
     m_backRightMotor
-        .setVoltage(m_backRightPidController.calculate(backRightIntendedSpeed));
+        .setVoltage(voltages[3]);
 
     SmartDashboard.putNumber("Front Left Motor Speed:", m_frontLeftEncoder.getRate());
     SmartDashboard.putNumber("Front Right Motor Speed:", m_frontRightEncoder.getRate());
     SmartDashboard.putNumber("Back Left Motor Speed:", m_backLeftEncoder.getRate());
     SmartDashboard.putNumber("Back Right Motor Speed:", m_backLeftEncoder.getRate());
+  }
+
+  public void applyWheelSpeedsFeedforward(MecanumDriveWheelSpeeds wheelSpeeds) {
+
+    wheelSpeeds.desaturate(DrivetrainConstants.kMaxWheelSpeed);
+
+    double frontLeftIntendedVoltage = m_frontLeftFeedforward.calculate(wheelSpeeds.frontLeftMetersPerSecond);
+    frontLeftIntendedVoltage += m_frontLeftLimiter.calculate(m_frontLeftEncoder.getRate());
+    double frontRightIntendedVoltage = m_frontRightFeedforward.calculate(wheelSpeeds.frontRightMetersPerSecond);
+    frontRightIntendedVoltage += m_frontRightLimiter.calculate(m_frontRightEncoder.getRate());
+    double backLeftIntendedVoltage = m_backLeftFeedforward.calculate(wheelSpeeds.rearLeftMetersPerSecond);
+    backLeftIntendedVoltage += m_backLeftLimiter.calculate(m_backLeftEncoder.getRate());
+    double backRightIntendedVoltage = m_backRightFeedforward.calculate(wheelSpeeds.rearRightMetersPerSecond);
+    backRightIntendedVoltage += m_backRightLimiter.calculate(m_backRightEncoder.getRate());
+
+    double[] voltages = desaturateVoltage(frontLeftIntendedVoltage, frontRightIntendedVoltage, backLeftIntendedVoltage, backRightIntendedVoltage);
+
+
+    m_frontLeftMotor
+        .setVoltage(voltages[0]);
+    m_frontRightMotor
+        .setVoltage(voltages[1]);
+    m_backLeftMotor
+        .setVoltage(voltages[2]);
+    m_backRightMotor
+        .setVoltage(voltages[3]);
+
+    SmartDashboard.putNumber("Front Left Motor Speed:", m_frontLeftEncoder.getRate());
+    SmartDashboard.putNumber("Front Right Motor Speed:", m_frontRightEncoder.getRate());
+    SmartDashboard.putNumber("Back Left Motor Speed:", m_backLeftEncoder.getRate());
+    SmartDashboard.putNumber("Back Right Motor Speed:", m_backLeftEncoder.getRate());
+  }
+
+  private double[] desaturateVoltage(double ... input){
+    double greatest = 0;
+    for(int i = 0; i < input.length; i++){
+      if(Math.abs(input[i]) > Math.abs(greatest)){
+        greatest = input[i];
+      }
+    }
+    if(Math.abs(greatest) > 12){
+      double divisor = Math.abs(greatest) / 12.0;
+      for(int i = 0; i < input.length; i++){
+        input[i] /= divisor;
+      }
+    }
+    return input;
+  }
+
+  public void applyVolts(Voltage voltage) {
+    m_frontLeftMotor.setVoltage(voltage);
+    m_backRightMotor.setVoltage(voltage);
+    m_frontLeftMotor.setVoltage(voltage);
+    m_backRightMotor.setVoltage(voltage);
+  }
+
+  public Command getSysIdAuto() {
+    return new SequentialCommandGroup(
+        m_sysIdRoutine.quasistatic(Direction.kForward),
+        m_sysIdRoutine.quasistatic(Direction.kReverse),
+        m_sysIdRoutine.dynamic(Direction.kForward),
+        m_sysIdRoutine.dynamic(Direction.kReverse));
   }
 
   @Override
