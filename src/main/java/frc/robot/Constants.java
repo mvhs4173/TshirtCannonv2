@@ -71,6 +71,11 @@ public final class Constants {
     public static final boolean kFrontRightInverted = true;
     public static final boolean kBackLeftInverted = false;
     public static final boolean kBackRightInverted = true;
+
+    public static final boolean kFrontLeftEncoderInverted = false;
+    public static final boolean kFrontRightEncoderInverted = false;
+    public static final boolean kBackLeftEncoderInverted = false;
+    public static final boolean kBackRightEncoderInverted = false;
     
     public static final double kDistancePerPulse = 7.0/20.0; //or 20.0/7.0 we dont know  
 
