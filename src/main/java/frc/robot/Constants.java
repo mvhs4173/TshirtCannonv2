@@ -32,6 +32,7 @@ import edu.wpi.first.units.measure.Voltage;
 public final class Constants {
   
   public static class OperatorConstants {
+    public static final double kDeadzone = 0.2;
     public static final int kDriverControllerPort = 0;
     public static final LinearVelocity kNormalWheelSpeed = LinearVelocity.ofBaseUnits(1, MetersPerSecond); //change later
     public static final AngularVelocity kRobotTurnSpeed = AngularVelocity.ofBaseUnits(3, RadiansPerSecond); //change later
@@ -83,7 +84,7 @@ public final class Constants {
     public static final Distance kWheelBase = Distance.ofRelativeUnits(52.5, Centimeters);
 
     public static final Distance kWheelDiameter = Distance.ofRelativeUnits(10, Inches);
-    public static final AngularVelocity kMotorMaxAngularVelocity = AngularVelocity.ofRelativeUnits(5310.0 / 60.0, RotationsPerSecond);
+    public static final AngularVelocity kMotorMaxAngularVelocity = AngularVelocity.ofRelativeUnits(2500 / 60.0, RotationsPerSecond); // theoretical 5310
     public static final double kMotorGearboxRatio = 1.0/9.0;
 
     public static final AngularVelocity kWheelMaxAngularVelocity = kMotorMaxAngularVelocity.times(kMotorGearboxRatio);

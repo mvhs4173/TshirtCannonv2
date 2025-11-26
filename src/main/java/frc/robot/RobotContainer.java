@@ -33,7 +33,7 @@ public class RobotContainer {
   private final Pneumatics m_pneumatics = new Pneumatics();
 
   // Replace with CommandPS4Controller or CommandJoystick if needed
-  private final XboxController m_driverController = new XboxController(OperatorConstants.kDriverControllerPort);
+  private final CommandXboxController m_driverController = new CommandXboxController(OperatorConstants.kDriverControllerPort);
 
   /**
    * The container for the robot. Contains subsystems, OI devices, and commands.
@@ -45,7 +45,7 @@ public class RobotContainer {
               -m_driverController.getLeftY(),
               m_driverController.getLeftX(),
               m_driverController.getRightX(),
-              m_driverController.getRightBumperButton());
+              m_driverController.getHID().getRightBumperButton());
         },
             m_drivetrain));
     // Configure the trigger bindings
@@ -67,8 +67,12 @@ public class RobotContainer {
    * joysticks}.
    */
   private void configureBindings() {
-    new Trigger(()->m_driverController.getAButton()).onTrue(new InstantCommand(m_pneumatics::fireCannon, m_pneumatics));
-    new Trigger(()->m_driverController.getYButton()).onTrue(new InstantCommand(m_drivetrain::resetGyro, m_drivetrain));
+    m_driverController.a().onTrue(new InstantCommand(m_pneumatics::fireCannon, m_pneumatics));
+    m_driverController.y().onTrue(new InstantCommand(m_drivetrain::resetGyro, m_drivetrain));
+    m_driverController.povUp().whileTrue(new RunCommand(m_drivetrain::spinFrontLeft, m_drivetrain)).onFalse(new InstantCommand(m_drivetrain::stop));
+    m_driverController.povDown().whileTrue(new RunCommand(m_drivetrain::spinBackRight, m_drivetrain)).onFalse(new InstantCommand(m_drivetrain::stop));
+    m_driverController.povLeft().whileTrue(new RunCommand(m_drivetrain::spinBackLeft, m_drivetrain)).onFalse(new InstantCommand(m_drivetrain::stop));
+    m_driverController.povRight().whileTrue(new RunCommand(m_drivetrain::spinFrontRight, m_drivetrain)).onFalse(new InstantCommand(m_drivetrain::stop));
   }
 
   /**
